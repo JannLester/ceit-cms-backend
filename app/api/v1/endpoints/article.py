@@ -30,6 +30,15 @@ async def get_all_articles(
     return await article_service.get_all_articles(db)
 
 
+@router.get("/admin/all", response_model=List[ArticleWithAuthor])
+async def get_all_articles_admin(
+    current_user: CurrentUser = Depends(require_permission("article.update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all articles for admin dashboard (all statuses)"""
+    return await article_service.get_all_articles_admin(db)
+
+
 @router.get("/my-articles", response_model=List[ArticleWithAuthor])
 async def get_my_articles(
     current_user: CurrentUser = Depends(require_auth),

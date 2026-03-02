@@ -29,6 +29,15 @@ class ArticleRepository(CRUDBase[Article, ArticleCreate, ArticleUpdate]):
             .execution_options(populate_existing=False)
         )
         return result.scalars().unique().all()
+
+    async def get_public_with_author(self, db: AsyncSession) -> List[Article]:
+        result = await db.execute(
+            select(Article)
+            .filter(Article.status == ArticleStatus.APPROVED)
+            .options(selectinload(Article.author))
+            .execution_options(populate_existing=False)
+        )
+        return result.scalars().unique().all()
     
     async def get_by_author(self, db: AsyncSession, author_id: UUID) -> List[Article]:
         result = await db.execute(
@@ -78,6 +87,13 @@ class ArticleRepository(CRUDBase[Article, ArticleCreate, ArticleUpdate]):
         update_data = article_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(article, field, value)
+
+        new_status = update_data.get("status")
+        if new_status == ArticleStatus.APPROVED:
+            article.approved_at = datetime.now(timezone.utc)
+            article.archived_at = None
+        elif new_status == ArticleStatus.ARCHIVED:
+            article.archived_at = datetime.now(timezone.utc)
         
         db.add(article)
         await db.commit()
