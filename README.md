@@ -1,130 +1,224 @@
 # CEIT CMS Backend
 
-> **⚠️ WARNING: DO NOT PUSH DIRECTLY TO THE MAIN BRANCH ⚠️**
->
-> Always create a feature branch and submit a pull request for review.
+FastAPI backend for CEIT CMS.
 
----
+## Current Project Structure
 
-## Project Structure
-
-```
+```text
 ceit-cms-backend/
-├── alembic/                    # Database migrations
-│   ├── versions/               # Migration scripts
-│   ├── env.py                  # Alembic environment config
-│   └── script.py.mako          # Migration template
+├── alembic/
+│   ├── env.py
+│   └── versions/
+│       ├── f4a7fa96e76e_initial_migration.py
+│       └── c8ab6cf878a8_backfill_article_status_timestamps.py
 ├── app/
-│   ├── api/
-│   │   └── v1/
-│   │       ├── endpoints/      # API route handlers
-│   │       │   └── auth.py
-│   │       ├── dependencies.py # Dependency injection
-│   │       └── router.py       # API router
+│   ├── main.py
+│   ├── api/v1/
+│   │   ├── router.py
+│   │   ├── dependencies.py
+│   │   └── endpoints/
+│   │       ├── auth.py
+│   │       ├── article.py
+│   │       └── upload.py
 │   ├── core/
-│   │   ├── config.py           # App configuration
-│   │   ├── database.py         # Database connection
-│   │   └── security.py         # Auth & security utils
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── security.py
+│   │   └── authz.py
 │   ├── middleware/
-│   │   └── cors.py             # CORS middleware
-│   ├── models/                 # SQLAlchemy models
-│   │   ├── __init__.py
-│   │   ├── article.py
-│   │   ├── base.py
-│   │   ├── permission.py
-│   │   ├── role.py
-│   │   └── user.py
-│   ├── repositories/           # Data access layer
-│   │   ├── __init__.py
-│   │   ├── base.py
-│   │   └── user.py
-│   ├── schemas/                # Pydantic schemas
-│   │   ├── __init__.py
-│   │   └── auth.py
-│   ├── services/               # Business logic
-│   │   ├── __init__.py
-│   │   └── auth_service.py
-│   └── main.py                 # FastAPI app entry point
+│   ├── models/
+│   ├── repositories/
+│   ├── schemas/
+│   └── services/
 ├── scripts/
-│   └── seed.py                 # Database seeding script
-├── .env                        # Environment variables (not in git)
-├── .env.example                # Example environment variables
-├── alembic.ini                 # Alembic configuration
-└── requirements.txt            # Python dependencies
+│   └── seed.py
+├── requirements.txt
+└── alembic.ini
 ```
 
----
+## Local Setup (Backend Only)
 
-## Setup Guide
+1. Create Virtual Environment
 
-### 1. Create Virtual Environment
-
-**Linux/macOS:**
-
+Linux/macOS:
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-**Windows:**
-
+Windows:
 ```powershell
-python -m venv venv
-venv\Scripts\activate
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 ```
 
-### 2. Install Dependencies
+2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Environment Variables
+3. Configure environment
 
-Copy the example env file and configure it:
-
+Linux/macOS:
 ```bash
 cp .env.example .env
 ```
 
-Then edit `.env` with your database credentials and secrets.
-
-### 4. Database Migrations
-
-**Create a new migration:**
-
-```bash
-# Linux/macOS
-alembic revision --autogenerate -m "Migration message"
-
-# Windows
-alembic revision --autogenerate -m "Migration message"
+Windows (PowerShell):
+```powershell
+Copy-Item .env.example .env
 ```
 
-**Apply migrations:**
+Recommended local DB value in `.env`:
 
-```bash
-alembic upgrade head
+```env
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/ceit_cms
 ```
 
-**Rollback last migration:**
+4. Start PostgreSQL
 
+Linux/macOS (systemd):
 ```bash
-alembic downgrade -1
+sudo systemctl start postgresql
 ```
 
-### 5. Seed Database
-
-```bash
-python scripts/seed.py
+Windows (Service):
+```powershell
+net start postgresql-x64-17
 ```
 
-### 6. Run Development Server
+If your service name differs, check it with:
 
-```bash
-uvicorn app.main:app --reload
+```powershell
+Get-Service *postgres*
 ```
 
-The API will be available at `http://localhost:8000`
+5. Run migrations + seed
 
-API docs: `http://localhost:8000/docs`
+Linux/macOS:
+```bash
+./.venv/bin/alembic upgrade head
+./.venv/bin/python scripts/seed.py
+```
+
+Windows:
+```powershell
+.venv\Scripts\alembic upgrade head
+.venv\Scripts\python scripts\seed.py
+```
+
+6. Start API
+
+Linux/macOS:
+```bash
+./.venv/bin/python -m app.main
+```
+
+Windows:
+```powershell
+.venv\Scripts\python -m app.main
+```
+
+## API URLs
+
+- Base API: `http://127.0.0.1:8000/api/v1`
+- Swagger docs: `http://127.0.0.1:8000/docs`
+
+## Auth Seed Accounts
+
+Created by `scripts/seed.py`:
+
+- `admin@ceit.edu` / `Admin123!`
+- `ce.author@ceit.edu` / `Admin123!`
+- `ee.author@ceit.edu` / `Admin123!`
+- `it.author@ceit.edu` / `Admin123!`
+
+## Start Full Workspace (Backend + Public + Admin)
+
+Use separate terminals.
+
+### Terminal 1 — PostgreSQL
+
+Linux/macOS:
+```bash
+sudo systemctl start postgresql
+```
+
+Windows:
+```powershell
+net start postgresql-x64-17
+```
+
+### Terminal 2 — Backend
+
+Linux/macOS:
+```bash
+cd /path/to/ceit-cms-backend
+source .venv/bin/activate
+./.venv/bin/alembic upgrade head
+./.venv/bin/python scripts/seed.py
+./.venv/bin/python -m app.main
+```
+
+Windows (replace with your local path):
+```powershell
+cd C:\path\to\ceit-cms-backend
+.venv\Scripts\Activate.ps1
+.venv\Scripts\alembic upgrade head
+.venv\Scripts\python scripts\seed.py
+.venv\Scripts\python -m app.main
+```
+
+### Terminal 3 — Public Frontend (`ceit-cms-frontend`)
+
+Linux/macOS:
+```bash
+cd /pathh/to/ceit-cms-frontend
+npm install
+npm run dev
+
+## or if using yarn
+
+yarn install
+yarn dev
+```
+
+Windows (PowerShell):
+```powershell
+cd C:\path\to\ceit-cms-frontend
+npm install
+npm run dev
+```
+
+### Terminal 4 — Admin Frontend (`BackendCMS`)
+
+Linux/macOS:
+```bash
+cd /home/yue-os/Desktop/BackendCMS
+npm install
+npm run dev
+
+## or if using yarn
+
+yarn install
+yarn dev
+```
+
+Windows (PowerShell):
+```powershell
+cd C:\path\to\BackendCMS
+npm install
+npm run dev
+
+## or if using yarn
+
+yarn install
+yarn dev
+```
+
+## Important Behavior Notes
+
+- Public endpoint `/api/v1/articles/` returns **approved** articles only.
+- Publish from admin sets status to `approved`, so it appears on the public frontend.
+- Archive from admin sets status to `archived`, so it disappears from public frontend.
