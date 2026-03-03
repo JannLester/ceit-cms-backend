@@ -1,18 +1,40 @@
 import os
 import sys
+import asyncio
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from sqlalchemy import text
 
 if __name__ == "__main__" and __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from app.middleware.cors import setup_cors
 from app.api.v1.router import api_router
+from app.core.database import AsyncSessionLocal
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Checking database connection...", flush=True)
+    try:
+        async def _check_db() -> None:
+            async with AsyncSessionLocal() as session:
+                await session.execute(text("SELECT 1"))
+
+        await asyncio.wait_for(_check_db(), timeout=8)
+        print("Database connection successful", flush=True)
+    except asyncio.TimeoutError:
+        print("Database connection failed: timeout", flush=True)
+    except Exception as exc:
+        print(f"Database connection failed: {exc}", flush=True)
+    yield
 
 # Create FastAPI app
 app = FastAPI(
     title="CEIT CMS API",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Setup CORS middleware

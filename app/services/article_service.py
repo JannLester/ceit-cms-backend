@@ -45,6 +45,29 @@ async def get_article(db: AsyncSession, article_id: UUID) -> ArticleWithAuthor:
 
 
 async def get_all_articles(db: AsyncSession) -> List[ArticleWithAuthor]:
+    articles = await article_repo.get_public_with_author(db)
+    return [
+        ArticleWithAuthor(
+            id=article.id,
+            author_id=article.author_id,
+            title=article.title,
+            body=article.body,
+            image_path=article.image_path,
+            image_alt_text=article.image_alt_text,
+            status=article.status,
+            created_at=article.created_at,
+            updated_at=article.updated_at,
+            approved_at=article.approved_at,
+            archived_at=article.archived_at,
+            author_first_name=article.author.first_name,
+            author_last_name=article.author.last_name,
+            author_email=article.author.email
+        )
+        for article in articles
+    ]
+
+
+async def get_all_articles_admin(db: AsyncSession) -> List[ArticleWithAuthor]:
     articles = await article_repo.get_all_with_author(db)
     return [
         ArticleWithAuthor(
